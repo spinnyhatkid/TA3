@@ -88,12 +88,12 @@ module NagiosInstall
     def configHost
       File.open('hosts.cfg', 'a+') { |file|
 	file.puts "define host{\nname\t\t\tlinux-box\nuse\t\t\tgeneric-host\ncheck_period\t\t24x7\ncheck_interval\t\t5\nretry_interval\t\t1\nmax_check_attempts\t10\ncheck_command\t\tcheck-host-alive\nnotification_period\t24x7\nnotification_interval\t30\nnotification_options\td,r\ncontact_groups\t\tadmins\nregister\t\t\t0\n}\n" unless file.each_line.detect{ |line| /name\t\t\tlinux-box/.match(line) }
-	@names.times do |x|
+	@names.length.times do |x|
 	  file.puts "define host{\nuse\t\t\tlinux-box\nhost_name\t\t\t#{@names[x]}\nalias\t\t\t#{@names[x]}\naddress\t\t\t#{@ips[x]}\n}\n"
 	end
       }
       File.open('services.cfg', 'a') { |file| 
-        @names.times do |x|
+        @names.length.times do |x|
           file.puts "define service{\n\tuse\t\t\tgeneric-service\n\thost_name\t\t#{@names[x]}\n\tservice_description\tCPU Load\n\tcheck_command\t\tcheck_nrpe!check_load\n}\n\ndefine service{\n\tuse\t\t\tgeneric-service\n\thost_name\t\t#{@names[x]}\n\tservice_description\tTotal Processes\n\tcheck_command\t\tcheck_nrpe!check_total_procs\n}\n\ndefine service{\n\tuse\t\t\tgeneric-service\n\thost_name\t\t#{@names[x]}\n\tservice_description\tCurrent Users\n\tcheck_command\t\tcheck_nrpe!check_users\n}\n\ndefine service{\n\tuse\t\t\tgeneric-service\n\thost_name\t\t#{@names[x]}\n\tservice_description\tSSH\n\tcheck_command\t\tcheck_ssh\n}\n\ndefine service{\n\tuse\t\t\tgeneric-service\n\thost_name\t\t#{@names[x]}\n\tservice_description\tPING\n\tcheck_command\t\tcheck_ping!100.0,20%!500.0,60%\n}\n\n"                      
         end
       }

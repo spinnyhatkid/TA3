@@ -20,7 +20,7 @@ module SendmailInstall
     
     def updateAccessdb
       File.open('/etc/mail/access', 'r+') { |file|
-        @clientips.times do |x|
+        @clientips.length.times do |x|
           file.puts "#{@names[x]}.nku.edu\t\t\t\tRELAY"         
         end
       }
@@ -40,7 +40,7 @@ module SendmailInstall
     def updateHosts
       File.open('/etc/hosts', 'r+') { |file| 
         file.puts "#{@serverip}\t\tcit470.nku.edu" unless file.each_line.detect{ |line| /cit470.nku.edu/.match(line) }
-        @clientips.times do |x|
+        @clientips.length.times do |x|
           file.puts "#{@clientips[x]}\t\t#{@names[x]}.nku.edu"                            
         end
       }

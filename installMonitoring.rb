@@ -2,6 +2,7 @@ require 'optparse'
 require 'ipaddr'
 require_relative 'modules/nagios'
 require_relative 'modules/sendmail'
+require_relative 'modules/monit'
 
 class ConfigServerMonitoring
   include NagiosInstall
@@ -16,20 +17,22 @@ class ConfigServerMonitoring
   
   def install
     begin
-    nagios = `service nagios status` != "nagios: unrecognized service"
-    puts "Nagios service already installed, moving to add Nagios hosts only" if nagios
-    if @addonly || nagios
-      #nserver = ServerNagios.new(@ip,@hostnames)
-      #nserver.addNagiosHosts
-    else
-      #nserver = ServerNagios.new(@ip, @hostnames)
-      #nserver.installNagios
-      #nserver.addNagiosHosts
-    end
-    
-    #sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`
-    #smserver = ServerSendmail.new(sip, @ip, @hostnames)
-    #smserver.installSendmail
+      nagios = `service nagios status` != "nagios: unrecognized service"
+      puts "Nagios service already installed, moving to add Nagios hosts only" if nagios
+      if @addonly || nagios
+	nserver = ServerNagios.new(@ip,@hostnames)
+	nserver.addNagiosHosts
+      else
+	nserver = ServerNagios.new(@ip, @hostnames)
+	nserver.installNagios
+	nserver.addNagiosHosts
+      end
+      
+      if File.open('/etc/mail/sendmail.cf').read().index('cit470.nku.edu')
+        sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`
+        smserver = ServerSendmail.new(sip, @ip, @hostnames)
+        smserver.installSendmail
+      end
     rescue
       puts "\e[31mSomething went wrong please check the logs.\e[0m"
     end
@@ -39,6 +42,8 @@ end
 class ConfigClientMonitoring
   include NagiosInstall
   include SendmailInstall
+  include MonitInstall
+
   def initialize(options)
     @ip = options[:ip]
     @mask = options[:mask]
@@ -47,17 +52,24 @@ class ConfigClientMonitoring
   
   def install
     begin
-    nagios = `service nagios status` != "nagios: unrecognized service"
-    if nagios
-      puts "Nagios service already installed, nothing to do"
-    else
-      #nclient = ClientNagios.new(@ip, @hostnames)
-      #nclient.installNagios
-    end
-    
-    #sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`
-    #smserver = ServerSendmail.new(serverip, @ip, @hostnames)
-    #smserver.installSendmail
+      nagios = `service nagios status` != "nagios: unrecognized service"
+      if nagios
+	puts "Nagios service already installed, nothing to do"
+      else
+	nclient = ClientNagios.new(@ip, @hostnames)
+	nclient.installNagios
+      end
+      
+      if File.open('/etc/mail/sendmail.cf').read().index('cit470.nku.edu')
+        sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`
+        smserver = ServerSendmail.new(serverip, @ip, @hostnames)
+        smserver.installSendmail
+      end
+
+      if `monit -h` == "-bash: monit: command not found"
+        monitclient = ClientMonit.new
+        monitclient.installMonit
+      end
     rescue
       puts "\e[31mSomething went wrong please check the logs.\e[0m"
     end
@@ -66,15 +78,15 @@ end
 
 options = {}
 OptionParser.new do |opts|
-  opts.banner = "Usage: install.rb [options] REQUIRED OPTIONS: -i -n"
+  opts.banner = "Usage: install.rb [options] REQUIRED OPTIONS: -i -n."
 
   options[:addonly] = nil
-  opts.on('-a', '--addonly', 'Only add hosts to nagios server, Nothing else will be installed') do |add|
+  opts.on('-a', '--addonly', 'Only add hosts to nagios server, Nothing else will be installed.') do |add|
     options[:addonly] = true
   end
 
   options[:ip] = nil
-  opts.on('-i', '--ip ADDRESS', 'IPv4 client IP ADDRESS.  IP address points toward the server when used with -c') do |ip|
+  opts.on('-i', '--ip ADDRESS', 'IPv4 client IP ADDRESS.  IP address points toward the server when used with -c.') do |ip|
     if ip =~ /^((\d{1,3}\.){3}\d{1,3}(,){0,1})*$/
       options[:ip] = ip.split(",")
     else
@@ -84,12 +96,12 @@ OptionParser.new do |opts|
   end
 
   options[:client] = nil
-  opts.on('-c', '--client', 'Installs as client') do |client|
+  opts.on('-c', '--client', 'Installs as client.  Only the first IP and HOSTNAME will be used to configure a connection with the server.') do |client|
     options[:client] = true
   end
 
   options[:mask] = "255.0.0.0"
-  opts.on('-m', '--mask MASK', 'CIDR subnet mask for port access.  Assumes CIDR/8 if nothing given') do |mask|
+  opts.on('-m', '--mask MASK', 'CIDR subnet mask for port access.  Assumes CIDR/8 if nothing given.') do |mask|
     begin
       if mask.to_i.between? 0, 32
         options[:mask] = IPAddr.new('255.255.255.255').mask(mask).to_s
@@ -111,7 +123,7 @@ OptionParser.new do |opts|
       options[:names] = names.split(",")
   end
 
-  opts.on_tail("-h", "--help", "Configures monitoring") do
+  opts.on_tail("-h", "--help", "Configures monitoring for chosen clients or a server.") do
     puts opts
     exit
   end
