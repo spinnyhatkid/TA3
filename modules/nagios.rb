@@ -9,6 +9,24 @@ module NagiosInstall
       `yum install -y wget httpd php gcc glibc glibc-common gd gd-devel make net-snmp openssl-devel`
       Dir.chdir("/tmp")
       getPackages
+      configUsers
+      configureInstall
+      `cp -R contrib/eventhandlers/ /usr/local/nagios/libexec/`
+      `chown -R nagios:nagios /usr/local/nagios/libexec/eventhandlers`
+      verifyStart
+      createNagiosPasswd
+      installNagiosPlugins
+      configureStartup
+      Dir.chdir("/usr/local/nagios/etc/objects/")
+      File.open('commands.cfg', 'a') { |cmd|
+	cmd.puts "\ndefine command{\n\t"
+	cmd.puts "command_name check_nrpe\n\t"
+	cmd.puts "command_line $USER1$/check_nrpe -H $HOSTADDRESS$ -c $ARG1$\n\t"
+	cmd.puts "}"
+      }
+    end
+    
+    def configureInstall
       Dir.chdir("nagios-4.0.4")
       `./configure --with-command-group=nagcmd`
       `make all`
@@ -17,19 +35,6 @@ module NagiosInstall
       `make install-config`
       `make install-commandmode`
       `make install-webconf`
-      `cp -R contrib/eventhandlers/ /usr/local/nagios/libexec/`
-      `chown -R nagios:nagios /usr/local/nagios/libexec/eventhandlers`
-      verifyStart
-      createNagiosPasswd
-      installNagiosPlugins
-      configureStartup
-      Dir.chdir("/usr/local/nagios/etc/objects/")
-      File.open('command.cfg', 'a') { |cmd|
-	cmd.puts "\ndefine command{\n"
-	cmd.puts "command_name check_nrpe\n"
-	cmd.puts "command_line $USER1$/check_nrpe -H $HOSTADDRESS$ -c $ARG1$\n"
-	cmd.puts "}"
-      }
     end
 
     def configureStartup
@@ -79,17 +84,22 @@ module NagiosInstall
 
     def addNagiosHosts
       Dir.chdir("/usr/local/nagios/etc/")
-      `touch hosts.cfg` unless File.exists("hosts.cfg")
-      `touch services.cfg` unless File.exists("services.cfg")
+      `touch hosts.cfg` unless File.exists?("hosts.cfg")
+      `touch services.cfg` unless File.exists?("services.cfg")
 
       configHost
     end
 
     def configHost
+      unless File.open('nagios.cfg').read() =~ /hosts.cfg/ && File.open('nagios.cfg').read() =~ /services.cfg/
+	cfg = File.read('nagios.cfg')
+	cfg = cfg.gsub(/templates.cfg/, "templates.cfg\ncfg_file=/usr/local/nagios/etc/objects/hosts.cfg\ncfg_file=/usr/local/nagios/etc/objects/services.cfg")
+	File.open('nagios.cfg', 'w') { |file| file.puts cfg }
+      end
       File.open('hosts.cfg', 'a+') { |file|
-	file.puts "define host{\nname\t\t\tlinux-box\nuse\t\t\tgeneric-host\ncheck_period\t\t24x7\ncheck_interval\t\t5\nretry_interval\t\t1\nmax_check_attempts\t10\ncheck_command\t\tcheck-host-alive\nnotification_period\t24x7\nnotification_interval\t30\nnotification_options\td,r\ncontact_groups\t\tadmins\nregister\t\t\t0\n}\n" unless file.each_line.detect{ |line| /name\t\t\tlinux-box/.match(line) }
+	file.puts "define host{\nname\t\t\tlinux-box\nuse\t\t\tgeneric-host\ncheck_period\t\t24x7\ncheck_interval\t\t5\nretry_interval\t\t1\nmax_check_attempts\t10\ncheck_command\t\tcheck-host-alive\nnotification_period\t24x7\nnotification_interval\t30\nnotification_options\td,r\ncontact_groups\t\tadmins\nregister\t\t\t0\n}\n" unless File.open('hosts.cfg').read() =~ /name\t\t\tlinux-box/
 	@names.length.times do |x|
-	  file.puts "define host{\nuse\t\t\tlinux-box\nhost_name\t\t\t#{@names[x]}\nalias\t\t\t#{@names[x]}\naddress\t\t\t#{@ips[x]}\n}\n"
+	  file.puts "define host{\nuse\t\t\tlinux-box\nhost_name\t\t#{@names[x]}\nalias\t\t\t#{@names[x]}\naddress\t\t\t#{@ips[x]}\n}\n\n"
 	end
       }
       File.open('services.cfg', 'a') { |file| 

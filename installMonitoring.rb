@@ -1,8 +1,8 @@
 require 'optparse'
 require 'ipaddr'
-require_relative 'modules/nagios'
-require_relative 'modules/sendmail'
-require_relative 'modules/monit'
+require "#{Dir.pwd}/modules/nagios"
+require "#{Dir.pwd}/modules/sendmail"
+require "#{Dir.pwd}/modules/monit"
 
 class ConfigServerMonitoring
   include NagiosInstall
@@ -17,7 +17,7 @@ class ConfigServerMonitoring
   
   def install
     begin
-      nagios = `service nagios status` != "nagios: unrecognized service"
+      nagios = `service nagios status 2>&1` != "nagios: unrecognized service\n"
       puts "Nagios service already installed, moving to add Nagios hosts only" if nagios
       if @addonly || nagios
 	nserver = ServerNagios.new(@ip,@hostnames)
@@ -28,10 +28,14 @@ class ConfigServerMonitoring
 	nserver.addNagiosHosts
       end
       
-      if File.open('/etc/mail/sendmail.cf').read().index('cit470.nku.edu')
-        sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`
+      sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`.chop
+      if !File.open('/etc/mail/sendmail.cf').read().index('cit470.nku.edu')
         smserver = ServerSendmail.new(sip, @ip, @hostnames)
         smserver.installSendmail
+      else
+        smserver = ServerSendmail.new(sip, @ip, @hostnames)
+        smserver.updateHosts
+	smserver.updateAccessdb
       end
     rescue
       puts "\e[31mSomething went wrong please check the logs.\e[0m"
@@ -52,7 +56,7 @@ class ConfigClientMonitoring
   
   def install
     begin
-      nagios = `service nagios status` != "nagios: unrecognized service"
+      nagios = `service nagios status 2>&1` != "nagios: unrecognized service\n"
       if nagios
 	puts "Nagios service already installed, nothing to do"
       else
@@ -60,13 +64,13 @@ class ConfigClientMonitoring
 	nclient.installNagios
       end
       
-      if File.open('/etc/mail/sendmail.cf').read().index('cit470.nku.edu')
+      if !File.open('/etc/mail/sendmail.cf').read().index('cit470.nku.edu')
         sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`
         smserver = ServerSendmail.new(serverip, @ip, @hostnames)
         smserver.installSendmail
       end
 
-      if `monit -h` == "-bash: monit: command not found"
+      if `monit -h 2>&1` == "-bash: monit: command not found\n"
         monitclient = ClientMonit.new
         monitclient.installMonit
       end

@@ -15,15 +15,16 @@ module SendmailInstall
       replaceSendmailCf
       updateIpTables
       updateAccessdb
-      `service sendmail restart`
     end
     
     def updateAccessdb
-      File.open('/etc/mail/access', 'r+') { |file|
-        @clientips.length.times do |x|
-          file.puts "#{@names[x]}.nku.edu\t\t\t\tRELAY"         
-        end
-      }
+      access = File.read('/etc/mail/access')
+      @clientips.length.times do |x|
+        access = access.gsub(/\.\.\./, "...\n#{@names[x]}.nku.edu\t\t\t\tRELAY")
+      end
+      File.open('/etc/mail/access', 'w') { |file| file.puts access }
+      `makemap hash /etc/mail/access < /etc/mail/access`
+      `service sendmail restart`
     end
     
     def updateIpTables
@@ -38,17 +39,19 @@ module SendmailInstall
     end
     
     def updateHosts
-      File.open('/etc/hosts', 'r+') { |file| 
-        file.puts "#{@serverip}\t\tcit470.nku.edu" unless file.each_line.detect{ |line| /cit470.nku.edu/.match(line) }
-        @clientips.length.times do |x|
-          file.puts "#{@clientips[x]}\t\t#{@names[x]}.nku.edu"                            
-        end
-      }
+      hosts = File.read('/etc/hosts')
+      hosts = hosts.gsub(/fail\./, "fail.\n#{@serverip}\t\tcit470.nku.edu") unless File.open('/etc/hosts').read() =~ /cit470.nku.edu/
+      @clientips.length.times do |x|
+	hosts = hosts.gsub(/fail\./, "fail.\n#{@clientips[x]}\t\t#{@names[x]}.nku.edu")
+      end
+      File.open('/etc/hosts', 'w') { |file| file.puts hosts }
     end
     
     def buildMCFile
       File.open('cf/cit470.mc', 'a') { |file| file.puts "divert(-1)\ndivert(0)dnl\nOSTYPE(linux)dnl\nDOMAIN(cit470.nku.edu)\nFEATURE(access_db)dnl\nMAILER(local)dnl\nMAILER(smtp)dnl" }
-      `cf/Build cit470.cf`
+      Dir.chdir("cf")
+      `./Build cit470.cf`
+      Dir.chdir("..")
     end
     
     def buildDomainFile
@@ -81,7 +84,7 @@ module SendmailInstall
     
     def updateHosts
       File.open('/etc/hosts', 'r+') { |file| 
-        file.puts "#{@clientip}\t\t#{@name}.nku.edu" unless file.each_line.detect{ |line| /cit470.nku.edu/.match(line) }
+        file.puts "#{@clientip}\t\t#{@name}.nku.edu" unless File.open('/etc/hosts').read() =~ /cit470.nku.edu/
         file.puts "#{@serverip}\t\tcit470.nku.edu"                            
       }
     end
