@@ -3,6 +3,7 @@ module MonitInstall
     def initialize
     end
 	
+    #Download appropriate packages and startup monit
     def installMonit
       `yum install pam-devel -y`
       `wget studenthome.nku.edu/~rileyt3/monit-5.8.1.tar.gz`
@@ -15,6 +16,7 @@ module MonitInstall
       `monit -v`
     end
     
+    #creates the monitrc file and configures it to monitor ssh, sendmail, syslog, partitions, and other various client statistics
     def configMonit
       File.open('/etc/monitrc', 'a') { |file| 
 	file.puts "set daemon 60\nset logfile syslog facility log_daemon\nset mailserver\n127.0.0.1\nset alert cit470.fa2014.team4@gmail.com\n\n"

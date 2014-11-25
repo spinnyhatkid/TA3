@@ -5,6 +5,7 @@ module NagiosInstall
       @names = names
     end
     
+    #main server install controller
     def installNagios 
       `yum install -y wget httpd php gcc glibc glibc-common gd gd-devel make net-snmp openssl-devel`
       Dir.chdir("/tmp")
@@ -26,6 +27,7 @@ module NagiosInstall
       }
     end
     
+    #configures and installs nagios
     def configureInstall
       Dir.chdir("nagios-4.0.4")
       `./configure --with-command-group=nagcmd`
@@ -37,6 +39,7 @@ module NagiosInstall
       `make install-webconf`
     end
 
+    #configures nagios and httpd to start on startup and opens port 80 for nagios access
     def configureStartup
       `chkconfig --add nagios`
       `chkconfig --level 35 nagios on`
@@ -48,11 +51,13 @@ module NagiosInstall
       `service iptables restart`
     end
 
+    #Creates the nagiosadmin user password entry for nagios login
     def createNagiosPasswd
       `touch /usr/local/nagios/etc/htpasswd.users`
       `echo nagiosadmin:uPODiTjNs5eaY >> /usr/local/nagios/etc/htpasswd.users` 
     end
 
+    #Install nagios plugins for functionality and connections to client hosts
     def installNagiosPlugins
       Dir.chdir("/tmp/nagios-plugins-2.0")
       `./configure --with-nagios-user=nagios --with-nagios-group=nagios`
@@ -65,12 +70,14 @@ module NagiosInstall
       `make install-daemon`
     end
 
+    #verifys the nagios config file and restarts the nagios and httpd services
     def verifyStart
       `/usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg`
       `service nagios restart`
       `service httpd restart`
     end
 
+    #fetches and unpackages required archives
     def getPackages
       `wget http://prdownloads.sourceforge.net/sourceforge/nagios/nagios-4.0.4.tar.gz`
       `wget http://nagios-plugins.org/download/nagios-plugins-2.0.tar.gz`
@@ -80,12 +87,14 @@ module NagiosInstall
       `tar zxf nrpe-2.15.tar.gz`
     end
 
+    #add the nagios and nagcmd users for services and directory control
     def configUsers
       `useradd nagios`
       `groupadd nagcmd`
       `usermod -a -G nagcmd nagios`
     end
 
+    #creates the hosts and services files required to monitor client hosts
     def addNagiosHosts
       Dir.chdir("/usr/local/nagios/etc/")
       `touch hosts.cfg` unless File.exists?("hosts.cfg")
@@ -94,6 +103,7 @@ module NagiosInstall
       configHost
     end
 
+    #configures the hosts and services that the nagios server will monitor
     def configHost
       unless File.open('nagios.cfg').read() =~ /hosts.cfg/ && File.open('nagios.cfg').read() =~ /services.cfg/
 	cfg = File.read('nagios.cfg')
@@ -120,6 +130,7 @@ module NagiosInstall
       @name = name
     end
     
+    #client nagios controller, installs requirements and opens port 5666 for server access
     def installNagios
       `yum install -y gcc glibc glibc-common gd gd-devel make net-snmp openssl-devel xinetd`
       configUsers
@@ -130,6 +141,7 @@ module NagiosInstall
       `service iptables restart`
     end
     
+    #configures the connections program for server client communications
     def configNRPE
       nrpe_file = File.read('/etc/xinetd.d/nrpe')
       nrpe_file = nrpe_file.gsub(/127\.0\.0\.1/, "127.0.0.1 localhost #{@ip.first}")
@@ -138,6 +150,7 @@ module NagiosInstall
       `service xinetd restart`
     end
     
+    #fetch and install required packages for server client communications
     def installPackages
       Dir.chdir("/tmp")
       `wget http://www.nagios-plugins.org/download/nagios-plugins-1.5.tar.gz`
@@ -159,6 +172,7 @@ module NagiosInstall
       `make install-xinetd`
     end
     
+    #creates and and configures the nagios user
     def configUsers
       `useradd nagios`
       `echo nagios | passwd nagios --stdin`
