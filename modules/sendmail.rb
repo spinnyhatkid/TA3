@@ -28,8 +28,9 @@ module SendmailInstall
     end
     
     def updateIpTables
-      `iptables -I INPUT -p tcp -m tcp --dport 25 -j ACCEPT`
-      `iptables -I INPUT -p udp -m udp --dport 25 -j ACCEPT`
+      `iptables -I INPUT 1 -p tcp -m tcp --dport 25 -j ACCEPT`
+      `iptables -I INPUT 1 -p udp -m udp --dport 25 -j ACCEPT`
+      `service iptables save`
       `service iptables restart`
     end
     

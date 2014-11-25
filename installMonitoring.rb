@@ -56,7 +56,7 @@ class ConfigClientMonitoring
   
   def install
     begin
-      nagios = `service nagios status 2>&1` != "nagios: unrecognized service\n"
+      nagios = File.exists?('/usr/local/nagios')
       if nagios
 	puts "Nagios service already installed, nothing to do"
       else
@@ -116,6 +116,16 @@ OptionParser.new do |opts|
     rescue 
       puts "\e[31mInvalid mask, Please be sure that the CIDR mask is a number between 0 and 32\e[0m"
       exit
+    end
+  end
+
+  opts.on('-r', '--reload', "Tests and restarts nagios, This may be required after installing all hosts since this will fail if the host is not installed at the time you are attempting to test and restart the Nagios service") do |restart|
+    begin
+      nr = ConfigServerMonitoring::ServerNagios.new(nil,nil)
+      nr.verifyStart
+      exit
+    rescue
+      puts "\e[31mRestart failed.\e[0m"
     end
   end
 

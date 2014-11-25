@@ -42,6 +42,10 @@ module NagiosInstall
       `chkconfig --level 35 nagios on`
       `chkconfig --add httpd`
       `chkconfig --level 35 httpd on`
+      `iptables -I INPUT 1 -p tcp -m tcp --dport 80 -j ACCEPT`
+      `iptables -I INPUT 1 -p udp -m udp --dport 80 -j ACCEPT`
+      `service iptables save`
+      `service iptables restart`
     end
 
     def createNagiosPasswd
@@ -63,8 +67,8 @@ module NagiosInstall
 
     def verifyStart
       `/usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg`
-      `service nagios start`
-      `service httpd start`
+      `service nagios restart`
+      `service httpd restart`
     end
 
     def getPackages
@@ -93,7 +97,7 @@ module NagiosInstall
     def configHost
       unless File.open('nagios.cfg').read() =~ /hosts.cfg/ && File.open('nagios.cfg').read() =~ /services.cfg/
 	cfg = File.read('nagios.cfg')
-	cfg = cfg.gsub(/templates.cfg/, "templates.cfg\ncfg_file=/usr/local/nagios/etc/objects/hosts.cfg\ncfg_file=/usr/local/nagios/etc/objects/services.cfg")
+	cfg = cfg.gsub(/templates.cfg/, "templates.cfg\ncfg_file=/usr/local/nagios/etc/hosts.cfg\ncfg_file=/usr/local/nagios/etc/services.cfg")
 	File.open('nagios.cfg', 'w') { |file| file.puts cfg }
       end
       File.open('hosts.cfg', 'a+') { |file|
@@ -121,13 +125,14 @@ module NagiosInstall
       configUsers
       installPackages
       configNRPE
-      `iptables -I INPUT -p tcp -m tcp --dport 5666 -j ACCEPT`
+      `iptables -I INPUT 1 -p tcp -m tcp --dport 5666 -j ACCEPT`
+      `service iptables save`
       `service iptables restart`
     end
     
     def configNRPE
       nrpe_file = File.read('/etc/xinetd.d/nrpe')
-      nrpe_file.gsub(/127\.0\.0\.1/, "127.0.0.1 \localhost #{@ip.first}")
+      nrpe_file = nrpe_file.gsub(/127\.0\.0\.1/, "127.0.0.1 localhost #{@ip.first}")
       File.open('/etc/xinetd.d/nrpe', 'w') { |file| file.puts nrpe_file}
       File.open('/etc/services', 'a') { |file| file.puts "nrpe\t\t5666/tcp\t\t\t# NRPE"}
       `service xinetd restart`
