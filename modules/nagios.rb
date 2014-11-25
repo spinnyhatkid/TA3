@@ -127,7 +127,7 @@ module NagiosInstall
     
     def configNRPE
       nrpe_file = File.read('/etc/xinetd.d/nrpe')
-      nrpe_file.gsub(/127\.0\.0\.1/, "127.0.0.1 localhost #{@ip.first}")
+      nrpe_file.gsub(/127\.0\.0\.1/, "127.0.0.1 \localhost #{@ip.first}")
       File.open('/etc/xinetd.d/nrpe', 'w') { |file| file.puts nrpe_file}
       File.open('/etc/services', 'a') { |file| file.puts "nrpe\t\t5666/tcp\t\t\t# NRPE"}
       `service xinetd restart`
