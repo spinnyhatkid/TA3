@@ -3,6 +3,8 @@ require 'ipaddr'
 require "#{Dir.pwd}/modules/nagios"
 require "#{Dir.pwd}/modules/sendmail"
 require "#{Dir.pwd}/modules/monit"
+ORIG_STD_OUT = STDOUT.clone
+ORIG_STD_ERR = STDERR.clone
 
 class ConfigServerMonitoring
   include NagiosInstall
@@ -13,6 +15,8 @@ class ConfigServerMonitoring
     @mask = options[:mask]
     @hostnames = options[:names]
     @addonly = options[:addonly]
+    STDOUT.reopen(File.open('Monitor.txt', 'a'))
+    STDERR.reopen(File.open('Monitor.txt', 'a'))
   end
   
   #runs through the various modules to install the server
@@ -38,7 +42,10 @@ class ConfigServerMonitoring
         smserver.updateHosts
 	smserver.updateAccessdb
       end
-    rescue
+    rescue Exception => msg
+      puts msg
+      STDOUT.reopen(ORIG_STD_OUT)
+      STDERR.reopen(ORIG_STD_ERR)
       puts "\e[31mSomething went wrong please check the logs.\e[0m"
     end
   end
@@ -53,6 +60,8 @@ class ConfigClientMonitoring
     @ip = options[:ip]
     @mask = options[:mask]
     @hostnames = options[:names]
+    STDOUT.reopen(File.open('Monitor.txt', 'a'))
+    STDERR.reopen(File.open('Monitor.txt', 'a'))
   end
   
   #runs through the various modules to install the client
@@ -76,7 +85,10 @@ class ConfigClientMonitoring
         monitclient = ClientMonit.new
         monitclient.installMonit
       end
-    rescue
+    rescue Exception => msg
+      puts msg
+      STDOUT.reopen(ORIG_STD_OUT)
+      STDERR.reopen(ORIG_STD_ERR)
       puts "\e[31mSomething went wrong please check the logs.\e[0m"
     end
   end
