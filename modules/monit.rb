@@ -25,6 +25,7 @@ module MonitInstall
 	file.puts "check device rootfs with path /\n  if SPACE usage > 80% then alert\n\n"
 	file.puts "check device varfs with path /var\n  if SPACE usage > 80% then alert\n\n"
         file.puts "#Alerts for localhost load memory and cpu\ncheck system localhost\n  if loadavg (5min) > 2 then alert\n  if memory usage > 80% then alert\n  if cpu usage (user) > 80% then alert\n  if swap > 80% then alert"
+	`chmod 700 /etc/monitrc`
       }
     end
   end

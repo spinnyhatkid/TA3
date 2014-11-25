@@ -65,12 +65,12 @@ class ConfigClientMonitoring
       end
       
       if !File.open('/etc/mail/sendmail.cf').read().index('cit470.nku.edu')
-        sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`
-        smserver = ServerSendmail.new(serverip, @ip, @hostnames)
-        smserver.installSendmail
+        sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`.chop
+        smclient = ClientSendmail.new(sip, @ip, @hostnames)
+        smclient.installSendmail
       end
 
-      if `monit -h 2>&1` == "-bash: monit: command not found\n"
+      if !File.exists?('/etc/monitrc')
         monitclient = ClientMonit.new
         monitclient.installMonit
       end

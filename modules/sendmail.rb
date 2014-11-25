@@ -83,16 +83,18 @@ module SendmailInstall
     end
     
     def updateHosts
-      File.open('/etc/hosts', 'r+') { |file| 
-        file.puts "#{@clientip}\t\t#{@name}.nku.edu" unless File.open('/etc/hosts').read() =~ /cit470.nku.edu/
-        file.puts "#{@serverip}\t\tcit470.nku.edu"                            
-      }
+      hosts = File.read('/etc/hosts')
+      hosts = hosts.gsub(/fail\./, "fail.\n#{@clientip}\t\t#{@name}.nku.edu")
+      hosts = hosts.gsub(/fail\./, "fail.\n#{@serverip}\t\tcit470.nku.edu") unless File.open('/etc/hosts').read() =~ /cit470.nku.edu/
+      File.open('/etc/hosts', 'w') { |file| file.puts hosts }
     end
     
     def buildMCFile
       File.open('cf/client.mc', 'a') { |file| file.puts "divert(-1)\ndivert(0)dnl\nOSTYPE(linux)dnl\nFEATURE(nullclient, cit470.nku.edu)dnl" }
-      `cf/Build client.cf`
-      `mv cf/client.cf /etc/sendmail.cf`
+      Dir.chdir("cf")
+      `./Build client.cf`
+      Dir.chdir("..")
+      `mv cf/client.cf /etc/mail/sendmail.cf`
     end
     
     def createConfigDir
