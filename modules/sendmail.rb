@@ -1,9 +1,10 @@
 module SendmailInstall
   class ServerSendmail
-    def initialize(serverip, clientips, names)
+    def initialize(serverip, clientips, names, mask)
       @serverip = serverip
       @clientips = clientips
       @names = names
+      @mask = mask
     end
     
     #main server sendmail controller
@@ -31,8 +32,8 @@ module SendmailInstall
     
     #updates and restarts the iptables
     def updateIpTables
-      `iptables -I INPUT 1 -p tcp -m tcp --dport 25 -j ACCEPT`
-      `iptables -I INPUT 1 -p udp -m udp --dport 25 -j ACCEPT`
+      `iptables -I INPUT 1 -s #{@clientips[0]}/#{@mask} -p tcp -m tcp --dport 25 -j ACCEPT`
+      `iptables -I INPUT 1 -s #{@clientips[0]}/#{@mask} -p udp -m udp --dport 25 -j ACCEPT`
       `service iptables save`
       `service iptables restart`
     end

@@ -25,20 +25,20 @@ class ConfigServerMonitoring
       nagios = `service nagios status 2>&1` != "nagios: unrecognized service\n"
       puts "Nagios service already installed, moving to add Nagios hosts only" if nagios
       if @addonly || nagios
-	nserver = ServerNagios.new(@ip,@hostnames)
+	nserver = ServerNagios.new(@ip,@hostnames, @mask)
 	nserver.addNagiosHosts
       else
-	nserver = ServerNagios.new(@ip, @hostnames)
+	nserver = ServerNagios.new(@ip, @hostnames, @mask)
 	nserver.installNagios
 	nserver.addNagiosHosts
       end
       
       sip = `ifconfig $1 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}' | grep -v '127.0.0.1'`.chop
       if !File.open('/etc/mail/sendmail.cf').read().index('cit470.nku.edu')
-        smserver = ServerSendmail.new(sip, @ip, @hostnames)
+        smserver = ServerSendmail.new(sip, @ip, @hostnames, @mask)
         smserver.installSendmail
       else
-        smserver = ServerSendmail.new(sip, @ip, @hostnames)
+        smserver = ServerSendmail.new(sip, @ip, @hostnames, @mask)
         smserver.updateHosts
 	smserver.updateAccessdb
       end
@@ -71,7 +71,7 @@ class ConfigClientMonitoring
       if nagios
 	puts "Nagios service already installed, nothing to do"
       else
-	nclient = ClientNagios.new(@ip, @hostnames)
+	nclient = ClientNagios.new(@ip, @hostnames, @mask)
 	nclient.installNagios
       end
       
@@ -140,7 +140,7 @@ OptionParser.new do |opts|
   #reload the nagios server to pick up newly installed clients, doesn't do it by defaults since the clients need to be installed before the server can be restarted with them.
   opts.on('-r', '--reload', "Tests and restarts nagios, This may be required after installing all hosts since this will fail if the host is not installed at the time you are attempting to test and restart the Nagios service") do |restart|
     begin
-      nr = ConfigServerMonitoring::ServerNagios.new(nil,nil)
+      nr = ConfigServerMonitoring::ServerNagios.new(nil,nil,nil)
       nr.verifyStart
       exit
     rescue

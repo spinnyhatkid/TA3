@@ -1,8 +1,9 @@
 module NagiosInstall
   class ServerNagios
-    def initialize(ips, names)
+    def initialize(ips, names, mask)
       @ips = ips
       @names = names
+      @mask = mask
     end
     
     #main server install controller
@@ -45,8 +46,8 @@ module NagiosInstall
       `chkconfig --level 35 nagios on`
       `chkconfig --add httpd`
       `chkconfig --level 35 httpd on`
-      `iptables -I INPUT 1 -p tcp -m tcp --dport 80 -j ACCEPT`
-      `iptables -I INPUT 1 -p udp -m udp --dport 80 -j ACCEPT`
+      `iptables -I INPUT 1 -s #{@ips[0]}/#{@mask} -p tcp -m tcp --dport 80 -j ACCEPT`
+      `iptables -I INPUT 1 -s #{@ips[0]}/#{@mask} -p udp -m udp --dport 80 -j ACCEPT`
       `service iptables save`
       `service iptables restart`
     end
@@ -125,9 +126,10 @@ module NagiosInstall
   end
 
   class ClientNagios
-    def initialize(ip, name)
+    def initialize(ip, name, mask)
       @ip = ip
       @name = name
+      @mask = mask
     end
     
     #client nagios controller, installs requirements and opens port 5666 for server access
@@ -136,7 +138,7 @@ module NagiosInstall
       configUsers
       installPackages
       configNRPE
-      `iptables -I INPUT 1 -p tcp -m tcp --dport 5666 -j ACCEPT`
+      `iptables -I INPUT 1 -s #{@ip}/#{@mask} -p tcp -m tcp --dport 5666 -j ACCEPT`
       `service iptables save`
       `service iptables restart`
     end
