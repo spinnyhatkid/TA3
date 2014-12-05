@@ -5,12 +5,17 @@ require 'ipaddr'
 require "#{Dir.pwd}/modules/nagios"
 require "#{Dir.pwd}/modules/sendmail"
 require "#{Dir.pwd}/modules/monit"
+require "#{Dir.pwd}/modules/syslog"
+require "#{Dir.pwd}/modules/logwatch"
 ORIG_STD_OUT = STDOUT.clone
 ORIG_STD_ERR = STDERR.clone
 
 class ConfigServerMonitoring
   include NagiosInstall
   include SendmailInstall
+  include MonitInstall
+  include SyslogInstall
+  include LogwatchInstall
   
   def initialize(options)
     @ip = options[:ip]
@@ -44,12 +49,19 @@ class ConfigServerMonitoring
         smserver.updateHosts
 	smserver.updateAccessdb
       end
+      if !File.exists?('/etc/monitrc')
+        monitserver = ServerMonit.new
+        monitserver.installMonit
+      end
+
     rescue Exception => msg
       puts msg
       STDOUT.reopen(ORIG_STD_OUT)
       STDERR.reopen(ORIG_STD_ERR)
       puts "\e[31mSomething went wrong please check the logs.\e[0m"
     end
+    ServerSyslog.configSyslog
+    InstallLogwatchServer.install
   end
 end
 
@@ -57,6 +69,7 @@ class ConfigClientMonitoring
   include NagiosInstall
   include SendmailInstall
   include MonitInstall
+  include LogwatchInstall
 
   def initialize(options)
     @ip = options[:ip]
@@ -93,6 +106,7 @@ class ConfigClientMonitoring
       STDERR.reopen(ORIG_STD_ERR)
       puts "\e[31mSomething went wrong please check the logs.\e[0m"
     end
+    InstallLogwatchClient.install
   end
 end
 
