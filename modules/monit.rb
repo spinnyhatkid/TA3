@@ -30,7 +30,8 @@ module MonitInstall
   `chmod 700 /etc/monitrc`
       }
     end
-  end  
+  end
+
   class ServerMonit
     def initialize
     end

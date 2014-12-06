@@ -193,4 +193,4 @@ cm.install
 
 #rescue
 #  puts "\e[31mThe -i --ip ADDRESS and -n --names HOSTNAMES options are required.\nIf the amount of ADDRESSES and HOSTNAMES don't match this error will be thrown as well.\e[0m"
-#end
+end
