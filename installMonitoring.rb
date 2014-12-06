@@ -186,11 +186,11 @@ end.parse!
 begin
 
 #raise an error if the ip or hostnames are missing or don't have an equal number for configuration
-#raise OptionParser::MissingArgument if options[:ip].nil? || options[:names].nil? || options[:ip].length != options[:names].length
+raise OptionParser::MissingArgument if options[:ip].nil? || options[:names].nil? || options[:ip].length != options[:names].length
 
 cm = options[:client] ? ConfigClientMonitoring.new(options) : ConfigServerMonitoring.new(options)
 cm.install
 
-#rescue
-#  puts "\e[31mThe -i --ip ADDRESS and -n --names HOSTNAMES options are required.\nIf the amount of ADDRESSES and HOSTNAMES don't match this error will be thrown as well.\e[0m"
+rescue
+  puts "\e[31mThe -i --ip ADDRESS and -n --names HOSTNAMES options are required.\nIf the amount of ADDRESSES and HOSTNAMES don't match this error will be thrown as well.\e[0m"
 end
